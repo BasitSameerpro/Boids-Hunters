@@ -5,14 +5,14 @@ class boids {
     // Steer the boid in a random direction
     this.velocity = p5.Vector.random2D();
     // Set the speed of the boid to a random value between 2 and 4
-    this.velocity.setMag(random(2.7, 3.7));
+    this.velocity.setMag(random(5, 15));
     this.maxVelocity = 6; // Maximum speed allowed for boid
 
     this.acceleration = createVector(0, 0); // Start with no acceleration. Accerleration will be changes based on the 3 rules
     // this.maxAcceleration = 0.5; // Maximum acceleration allowed for boid
     this.color = color(random(100, 255), random(100, 255), random(100, 255)); // Random color for the boid
-    this.maxForce = 0.8;
-    this.maxSpeed = 16;
+    this.maxForce = 1.5;
+    this.maxSpeed = 20;
   }
   // what will be displayed on the canvas
   show() {

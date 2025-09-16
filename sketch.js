@@ -1,6 +1,6 @@
 const flocks = [];
 const maxBoids = 500;
-const initialBoids = 20;
+const initialBoids = 50;
 
 let alignmentSlider, cohesionSlider, separationSlider; // What the sliders will control (steering forces)
 function setup() {
