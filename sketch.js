@@ -1,5 +1,5 @@
 const flocks = [];
-const maxBoids = 500;
+const maxBoids = 5000;
 const initialBoids = 20;
 
 let alignmentSlider, cohesionSlider, separationSlider; // What the sliders will control (steering forces)
