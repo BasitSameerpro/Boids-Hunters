@@ -4,7 +4,7 @@ const initialBoids = 20;
 
 let alignmentSlider, cohesionSlider, separationSlider; // What the sliders will control (steering forces)
 function setup() {
-  createCanvas(windowWidth - 8, windowHeight - 8); // Set the size of the canvas {width, height}
+  createCanvas(windowWidth, windowHeight); // Set the size of the canvas {width, height}
   alignmentSlider = createSlider(0, 5, 1, 0.1); // {max, min,default, step}
   cohesionSlider = createSlider(0, 3, 0.5, 0.1);
   separationSlider = createSlider(0, 5, 1.5, 0.1);
