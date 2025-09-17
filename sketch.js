@@ -47,5 +47,14 @@ function draw() {
   textSize(20);
   text("Boids Simulation", 20, 40);
   text("Boids: " + flocks.length, 20, 70);
+  textSize(15);
   text("Click to add boids", width / 2, 20);
+  textSize(10);
+  text("Alignment", alignmentSlider.x * 2 + alignmentSlider.width, height - 5);
+  text("Cohesion", cohesionSlider.x * 2 + cohesionSlider.width, height - 25);
+  text(
+    "Separation",
+    separationSlider.x * 2 + separationSlider.width,
+    height - 45
+  );
 }
