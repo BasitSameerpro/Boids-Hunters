@@ -1,11 +1,4 @@
-html ,body {
+body {
     margin: 0;
-    padding:0;
-    background-color: #333232;
-}
-canvas {
-    display: block;
-    position: absolute;
-    top:0;
-    left:0;
+    overflow: hidden;
 }

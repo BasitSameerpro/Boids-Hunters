@@ -1,173 +1,211 @@
 const flocks = [];
+let newBoids = [];
 const maxBoids = 350;
 const maxHunters = 30;
 const initialBoids = 20;
 let initialHunters = 5;
 const hunters = [];
-let alignmentSlider, cohesionSlider, separationSlider;
-let fearSlider, boidFleeRangeSlider, hunterRangeSlider;
-let alignmentRangeSlider, cohesionRangeSlider, separationRangeSlider;
+const obstacles = [];
+
+// Day/Night
+let timeOfDay = 0;
+let dayDuration = 7200;
+let cloudOffset = 0;
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
-
-  // Force sliders
-  alignmentSlider = createSlider(0, 5, 1, 0.1);
-  cohesionSlider = createSlider(0, 3, 0.5, 0.1);
-  separationSlider = createSlider(0, 5, 1.5, 0.1);
-  fearSlider = createSlider(0, 5, 2, 0.1);
-
-  // Range sliders
-  alignmentRangeSlider = createSlider(10, 150, 50, 5);
-  cohesionRangeSlider = createSlider(10, 150, 50, 5);
-  separationRangeSlider = createSlider(10, 100, 25, 5);
-  boidFleeRangeSlider = createSlider(50, 200, 120, 5);
-  hunterRangeSlider = createSlider(100, 300, 180, 10);
-
-  positionSliders();
+  setupControls();
 
   for (let i = 0; i < initialBoids; i++) {
-    flocks.push(new boids(random(width), random(height)));
+    flocks.push(new Boid(random(width), random(height)));
   }
   for (let i = 0; i < initialHunters; i++) {
-    hunters.push(new hunter(random(width), random(height)));
-  }
-}
-
-function positionSliders() {
-  // Check if mobile/tablet (width < 768px)
-  if (width < 768) {
-    // Stack all sliders vertically on the left for mobile
-    let startY = height - 180;
-    alignmentSlider.position(10, startY);
-    cohesionSlider.position(10, startY + 20);
-    separationSlider.position(10, startY + 40);
-    fearSlider.position(10, startY + 60);
-    alignmentRangeSlider.position(10, startY + 80);
-    cohesionRangeSlider.position(10, startY + 100);
-    separationRangeSlider.position(10, startY + 120);
-    boidFleeRangeSlider.position(10, startY + 140);
-    hunterRangeSlider.position(10, startY + 160);
-  } else {
-    // Split layout for larger screens
-    // Position force sliders on the left
-    alignmentSlider.position(20, height - 20);
-    cohesionSlider.position(20, height - 40);
-    separationSlider.position(20, height - 60);
-    fearSlider.position(20, height - 80);
-
-    // Position range sliders on the right
-    let rightX = width - 180;
-    alignmentRangeSlider.position(rightX, height - 20);
-    cohesionRangeSlider.position(rightX, height - 40);
-    separationRangeSlider.position(rightX, height - 60);
-    boidFleeRangeSlider.position(rightX, height - 80);
-    hunterRangeSlider.position(rightX, height - 100);
+    hunters.push(new Hunter(random(width), random(height)));
   }
 }
 
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
-
-  // Reposition force sliders on the left
-  alignmentSlider.position(20, height - 20);
-  cohesionSlider.position(20, height - 40);
-  separationSlider.position(20, height - 60);
-  fearSlider.position(20, height - 80);
-
-  // Reposition range sliders on the right
-  let rightX = width - 180;
-  alignmentRangeSlider.position(rightX, height - 20);
-  cohesionRangeSlider.position(rightX, height - 40);
-  separationRangeSlider.position(rightX, height - 60);
-  boidFleeRangeSlider.position(rightX, height - 80);
-  hunterRangeSlider.position(rightX, height - 100);
+  positionControls();
 }
 
-// Left click to add boid
-function mousePressed() {
-  if (flocks.length <= maxBoids) {
-    flocks.push(new boids(mouseX, mouseY));
-  } else {
-    console.log("Max boids reached");
+function isMouseOverControls() {
+  const controls = [
+    alignmentSlider,
+    cohesionSlider,
+    separationSlider,
+    fearSlider,
+    alignmentRangeSlider,
+    cohesionRangeSlider,
+    separationRangeSlider,
+    boidFleeRangeSlider,
+    hunterRangeSlider,
+    quadtreeCheckbox,
+  ];
+  for (let c of controls) {
+    if (
+      c &&
+      mouseX > c.x &&
+      mouseX < c.x + c.width &&
+      mouseY > c.y &&
+      mouseY < c.y + c.height
+    )
+      return true;
   }
+  return false;
 }
 
-// Press 'H' key to add hunter
+function mousePressed() {
+  if (isMouseOverControls()) return;
+  if (flocks.length < maxBoids) flocks.push(new Boid(mouseX, mouseY));
+}
+function mouseDragged() {
+  if (isMouseOverControls()) return;
+  obstacles.push(new Obstacle(mouseX, mouseY, 10));
+}
+
+let debug = false;
+let showQuadtree = false;
+
 function keyPressed() {
-  let newX = mouseX;
-  let newY = mouseY;
   if (key === "h" || key === "H") {
-    if (hunters.length < maxHunters) {
-      hunters.push(new hunter(newX, newY));
-    } else {
-      console.log("Max hunters reached");
+    if (hunters.length < maxHunters) hunters.push(new Hunter(mouseX, mouseY));
+  } else if (key === "d" || key === "D") debug = !debug;
+  else if (key === "q" || key === "Q") showQuadtree = !showQuadtree;
+}
+
+function drawCloud(x, y, s = 1) {
+  push();
+  translate(x, y);
+  ellipse(0, 0, 100 * s, 60 * s);
+  ellipse(-40 * s, -10 * s, 80 * s, 50 * s);
+  ellipse(40 * s, -10 * s, 80 * s, 50 * s);
+  ellipse(-20 * s, 15 * s, 70 * s, 45 * s);
+  ellipse(20 * s, 15 * s, 70 * s, 45 * s);
+  pop();
+}
+
+function drawBackground() {
+  timeOfDay = (frameCount / dayDuration) % 1;
+  let sunX = width * 0.15 + width * 0.7 * timeOfDay;
+  let sunY = height * 0.8 - height * 0.6 * sin(timeOfDay * PI);
+
+  let skyTop, skyBottom, sunColor, sunAlpha;
+
+  if (timeOfDay < 0.25) {
+    skyTop = color(255, 180, 100);
+    skyBottom = color(135, 206, 250);
+    sunColor = color(255, 200, 100);
+    sunAlpha = 60;
+  } else if (timeOfDay < 0.5) {
+    skyTop = color(135, 206, 250);
+    skyBottom = color(70, 130, 200);
+    sunColor = color(255, 240, 180);
+    sunAlpha = 50;
+  } else if (timeOfDay < 0.75) {
+    skyTop = color(255, 140, 80);
+    skyBottom = color(100, 60, 180);
+    sunColor = color(255, 100, 50);
+    sunAlpha = 70;
+  } else {
+    skyTop = color(10, 10, 40);
+    skyBottom = color(5, 5, 30);
+    sunColor = color(240, 240, 255);
+    sunAlpha = 40;
+  }
+
+  for (let y = 0; y <= height; y++) {
+    let n = map(y, 0, height, 0, 1);
+    stroke(lerpColor(skyTop, skyBottom, n));
+    line(0, y, width, y);
+  }
+
+  noStroke();
+  fill(sunColor, sunAlpha);
+  ellipse(sunX, sunY, 120 + sin(frameCount * 0.02) * 15);
+
+  if (timeOfDay > 0.75 || timeOfDay < 0.1) {
+    fill(255, 255, 200, random(100, 255));
+    for (let i = 0; i < 80; i++) {
+      let sx = (i * 137.5 + frameCount * 0.1) % width;
+      let sy = (i * 97.3) % (height * 0.5);
+      ellipse(sx, sy, random(1, 3));
     }
+  }
+
+  if (timeOfDay >= 0.15 && timeOfDay <= 0.85) {
+    cloudOffset += 0.3;
+    push();
+    translate(cloudOffset % width, 0);
+    fill(255, 255, 255, 180);
+    noStroke();
+    drawCloud(width * 0.2, height * 0.15, 1.2);
+    drawCloud(width * 0.7, height * 0.25, 1.5);
+    drawCloud(width * 1.3, height * 0.1, 1.0);
+    drawCloud(width * 1.8, height * 0.2, 1.3);
+    drawCloud(width * -0.4, height * 0.18, 1.1);
+    pop();
   }
 }
 
 function draw() {
-  background(25);
+  drawBackground();
 
-  // Update boids with fear behavior
-  flocks.forEach((boid) => {
-    boid.flock(flocks, hunters); // Pass hunters to flock method
-    boid.update();
-    boid.edge();
-    boid.show();
-  });
+  let boundary = new Rectangle(width / 2, height / 2, width / 2, height / 2);
+  let qtree = new QuadTree(boundary, 4);
+  for (let b of flocks) qtree.insert(b);
+  let flockData = getUseQuadtree() ? qtree : flocks;
 
-  // Update hunters with chase behavior
-  hunters.forEach((hunter) => {
-    let isHunting = hunter.chase(flocks);
+  for (let o of obstacles) o.show();
 
-    if (!isHunting) {
-      hunter.wander();
+  newBoids = [];
+  for (let i = flocks.length - 1; i >= 0; i--) {
+    let b = flocks[i];
+
+    // Remove dead boids
+    if (!b.isAlive) {
+      flocks.splice(i, 1);
+      continue;
     }
 
-    let separation = hunter.separate(hunters);
-    separation.mult(0.5);
-    hunter.acceleration.add(separation);
+    b.flock(flockData, hunters, obstacles);
+    b.update(); // energy drain + age happens here
+    b.edge();
+    b.show();
 
-    hunter.update();
-    hunter.edge();
-    hunter.show();
+    let baby = b.reproduce(flockData);
+    if (baby) newBoids.push(baby);
+  }
+  flocks.push(...newBoids);
+
+  hunters.forEach((h) => {
+    let hunting = h.chase(flockData);
+    if (!hunting) h.wander();
+    h.acceleration.add(h.separate(hunters).mult(0.5));
+    h.avoid(obstacles);
+    h.update();
+    h.edge();
+    h.show();
   });
 
-  // Display info
-  fill(200);
+  let textCol =
+    timeOfDay > 0.7 || timeOfDay < 0.15 ? color(220) : color(20, 40, 80);
+  fill(textCol);
   textSize(20);
   text("Boids Simulation", 20, 40);
   text("Boids: " + flocks.length, 20, 70);
   text("Hunters: " + hunters.length, 20, 90);
   textSize(15);
-  text("Click to add boids", width / 2 - 100, 20);
-  text("Press 'H' to add hunter", width / 2 - 100, 40);
+  text("Click → add boid", width / 2 - 110, 20);
+  text("Drag → obstacles", width / 2 - 110, 40);
+  text("H → add hunter", width / 2 - 110, 60);
+  text("D → debug · Q → quadtree", width / 2 - 110, 80);
 
-  // Left side labels (Forces)
-  textSize(10);
-  text(
-    "Alignment Force",
-    alignmentSlider.x * 2 + alignmentSlider.width,
-    height - 5
-  );
-  text(
-    "Cohesion Force",
-    cohesionSlider.x * 2 + cohesionSlider.width,
-    height - 25
-  );
-  text(
-    "Separation Force",
-    separationSlider.x * 2 + separationSlider.width,
-    height - 45
-  );
-  text("Fear Force", fearSlider.x * 2 + fearSlider.width, height - 65);
+  if (debug) {
+    fill(textCol);
+    text("Debug ON", 20, 110);
+  }
+  if (showQuadtree) qtree.show();
 
-  // Right side labels (Ranges)
-  let rightX = width - 180;
-  text("Alignment Range", rightX - 100, height - 5);
-  text("Cohesion Range", rightX - 100, height - 25);
-  text("Separation Range", rightX - 100, height - 45);
-  text("Flee Range", rightX - 60, height - 65);
-  text("Hunter Chase Range", rightX - 110, height - 85);
+  drawControlLabels();
 }
